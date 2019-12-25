@@ -10,6 +10,9 @@ app = QtWidgets.QApplication([])
 lua = LuaRuntime(unpack_returned_tuples=True)
 cwd = os.getcwd() + "\\..\\"
 
+language = {}
+modinfo = {}
+
 class MainWidg(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -20,6 +23,17 @@ class MainWidg(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addWidget(self.text)
         self.setLayout(self.layout)
+
+    def loadedmodinfo(self):
+        global cwd
+        global modinfo
+        self.text.setText(modinfo["name"] + "\n" + modinfo["description"])
+        model = QtWidgets.QFileSystemModel()
+        model.setRootPath(cwd + "res\\")
+        tree = QtWidgets.QTreeView()
+        tree.setModel(model)
+        tree.setRootIndex(model.index(cwd + "res\\"))
+        self.layout.addWidget(tree)
 
 widget = MainWidg()
 
@@ -38,9 +52,6 @@ def evaldata(content):
     datafnc = datafnc.replace("data()", "()")
     fnc = lua.eval(datafnc)
     return fnc()
-
-language = {}
-modinfo = {}
 
 def replacelangs(content):
     global language
@@ -81,7 +92,9 @@ async def startup():
             content = replacelangs(content)
             modinfo = dict(evaldata(content)["info"])
         
-
+        stage("Loading complete: " + modinfo["name"])
+        widget.loadedmodinfo()
+        return
     else:
         stage("No mod found!\nCreate one:")
         return
