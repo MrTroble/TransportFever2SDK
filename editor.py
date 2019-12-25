@@ -40,8 +40,23 @@ def evaldata(content):
     return fnc()
 
 language = {}
+modinfo = {}
+
+def replacelangs(content):
+    global language
+    if not 'en' in language.keys():
+        return content
+    lang = language["en"]
+    for itm, val in lang.items():
+        if type(val) is str:
+            val = '"' + val + '"'
+        content = content.replace("_(\"" + itm +"\")", val)
+    return content
 
 async def startup():
+    global language
+    global modinfo
+
     stage("Checking project files")
     # check if a mod exist
     modpath = cwd + "mod.lua"
@@ -51,16 +66,22 @@ async def startup():
         # load languages
         if os.path.exists(stringpath):
             with open(stringpath, "r") as langfile:
-                enlang = evaldata(langfile.read())["en"]
+                enlang = evaldata(langfile.read())
+                language = dict(enlang)
                 for itm, val in enlang.items():
-                    language[itm] = val
+                    language[itm] = dict(val)
+
+                for itm, val in enlang["en"].items():
                     lua.execute(str(itm) + " = \"" + str(val) + "\"") 
 
         stage("Checking mod.lua")
         # check the integrety of the mod.lua
         with open(modpath, "r") as modfile:
             content = modfile.read()
-            
+            content = replacelangs(content)
+            modinfo = dict(evaldata(content)["info"])
+        
+
     else:
         stage("No mod found!\nCreate one:")
         return
