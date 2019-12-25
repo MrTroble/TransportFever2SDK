@@ -39,15 +39,24 @@ def evaldata(content):
     fnc = lua.eval(datafnc)
     return fnc()
 
+language = {}
+
 async def startup():
     stage("Checking project files")
     # check if a mod exist
     modpath = cwd + "mod.lua"
+    stringpath = cwd + "strings.lua"
     if os.path.exists(modpath):
-        stage("Loading language file")
+        stage("Check and load language files")
         # load languages
-        
-        stage("Mod found checking mod.lua")
+        if os.path.exists(stringpath):
+            with open(stringpath, "r") as langfile:
+                enlang = evaldata(langfile.read())["en"]
+                for itm, val in enlang.items():
+                    language[itm] = val
+                    lua.execute(str(itm) + " = \"" + str(val) + "\"") 
+
+        stage("Checking mod.lua")
         # check the integrety of the mod.lua
         with open(modpath, "r") as modfile:
             content = modfile.read()
