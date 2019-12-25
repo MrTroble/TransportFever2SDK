@@ -1,14 +1,12 @@
 import sys
 from PySide2 import QtCore, QtWidgets, QtGui
 import asyncio
-from lupa import LuaRuntime
 import os
 import os.path
 import re
+import tcutil
 
 app = QtWidgets.QApplication([])
-lua = LuaRuntime(unpack_returned_tuples=True)
-cwd = os.getcwd() + "\\..\\"
 
 language = {}
 modinfo = {}
@@ -25,33 +23,20 @@ class MainWidg(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
     def loadedmodinfo(self):
-        global cwd
         global modinfo
         self.text.setText(modinfo["name"] + "\n" + modinfo["description"])
         model = QtWidgets.QFileSystemModel()
-        model.setRootPath(cwd + "res\\")
+        model.setRootPath(tcutil.cwd + "res\\")
         tree = QtWidgets.QTreeView()
         tree.setModel(model)
-        tree.setRootIndex(model.index(cwd + "res\\"))
+        tree.setRootIndex(model.index(tcutil.cwd + "res\\"))
         self.layout.addWidget(tree)
 
 widget = MainWidg()
 
-#regex storage
-datafunctionre = re.compile(r"function data\(\)[\s\w\W]*end", re.M)
-
 def stage(info):
     widget.text.setText(info)
     print(info)
-
-def evaldata(content):
-    datafnc = datafunctionre.search(content).group(0)
-    if datafnc == None:
-        stage("Error parsing content of data method!")
-        return None
-    datafnc = datafnc.replace("data()", "()")
-    fnc = lua.eval(datafnc)
-    return fnc()
 
 def replacelangs(content):
     global language
@@ -70,27 +55,24 @@ async def startup():
 
     stage("Checking project files")
     # check if a mod exist
-    modpath = cwd + "mod.lua"
-    stringpath = cwd + "strings.lua"
+    modpath = tcutil.cwd + "mod.lua"
+    stringpath = tcutil.cwd + "strings.lua"
     if os.path.exists(modpath):
         stage("Check and load language files")
         # load languages
         if os.path.exists(stringpath):
             with open(stringpath, "r") as langfile:
-                enlang = evaldata(langfile.read())
+                enlang = tcutil.evaldata(langfile.read())
                 language = dict(enlang)
                 for itm, val in enlang.items():
                     language[itm] = dict(val)
-
-                for itm, val in enlang["en"].items():
-                    lua.execute(str(itm) + " = \"" + str(val) + "\"") 
 
         stage("Checking mod.lua")
         # check the integrety of the mod.lua
         with open(modpath, "r") as modfile:
             content = modfile.read()
             content = replacelangs(content)
-            modinfo = dict(evaldata(content)["info"])
+            modinfo = dict(tcutil.evaldata(content)["info"])
         
         stage("Loading complete: " + modinfo["name"])
         widget.loadedmodinfo()
